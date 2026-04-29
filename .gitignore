@@ -1,0 +1,7 @@
+keys/private_key.json
+data/vault.json
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
