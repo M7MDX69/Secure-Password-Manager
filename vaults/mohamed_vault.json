@@ -1,0 +1,7 @@
+{
+    "encrypted_vault": "This is some fakeeee encrypted data for testing",
+    "signature": {
+        "S1": "77",
+        "S2": "457"
+    }
+}

@@ -4,7 +4,7 @@ import secrets
 
 #Step 1: Read domain parameters from config file
 
-def read_parameters(config_file="config.json"):
+def read_parameters(config_file="data/config.json"):
     
     #check if file exists
     
@@ -50,7 +50,7 @@ def save_private_key(username , x):
     
     #private key is to be saved locally in a file named after the username
     
-    filename = f"{username}_private_key.json"
+    filename = f"keys/{username}_private_key.json"
     
     key_data = {
         "username" : username,
@@ -75,7 +75,7 @@ def generate_public_key(p , alpha , x):
 def save_public_key(username , p , alpha , y):
         
         #save public key locally and then it can be shared with others
-        filename = f"{username}_public_key.json"
+        filename = f"keys/{username}_public_key.json"
     
         key_data = {
             "username" : username,
