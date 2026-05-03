@@ -46,14 +46,16 @@ def generate_private_key(p):
     return x
 
 
-def save_private_key(username , x):
-    
+def save_private_key(username, p, alpha, x):
+
     #private key is to be saved locally in a file named after the username
-    
+
     filename = f"keys/{username}_private_key.json"
-    
+
     key_data = {
-        "username" : username,
+        "username"    : username,
+        "p"           : str(p),
+        "alpha"       : str(alpha),
         "private_key" : str(x) #casted to string to handle large integers
     }
     
@@ -94,17 +96,16 @@ def save_public_key(username , p , alpha , y):
         #main for testing 
         
 if __name__ == "__main__":
-    username = input("Enter your username: ")
-    private_file = f"{username}_private_key.json"
-    public_file = f"{username}_public_key.json"
+    username     = input("Enter your username: ")
+    private_file = f"keys/{username}_private_key.json"
+    public_file  = f"keys/{username}_public_key.json"
 
     # Check if keys already exist to satisfy Property 4 (generated ONCE)
     if os.path.exists(private_file) and os.path.exists(public_file):
         print(f"[*] Keys for {username} already exist. Initialization skipped.")
     else:
-        # Run your initialization steps here
         p, alpha = read_parameters()
         x = generate_private_key(p)
-        save_private_key(username, x)
+        save_private_key(username, p, alpha, x)
         y = generate_public_key(p, alpha, x)
         save_public_key(username, p, alpha, y)
