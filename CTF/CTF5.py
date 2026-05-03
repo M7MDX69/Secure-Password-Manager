@@ -4,14 +4,10 @@ import re
 from binascii import hexlify, unhexlify
 from Crypto.Util.Padding import pad
 
-# ==========================================
-# 1. CTF NETWORK SETUP
-# ==========================================
 BASE_URL = "http://cbc-ctf.westeurope.azurecontainer.io:5000"
 session = requests.Session()
 
 def fetch_ciphertext() -> bytes:
-    """Fetches the target ciphertext from the web server."""
     r = session.get(f"{BASE_URL}/")
     match = re.search(r'[0-9a-fA-F]{32,}', r.text)
     if not match:
@@ -38,9 +34,6 @@ def ctf_oracle(iv: bytes, block: bytes) -> bool:
         except requests.exceptions.JSONDecodeError:
             return False
 
-# ==========================================
-# 2. CRYPTOGRAPHY LOGIC
-# ==========================================
 BLOCK_SIZE = 16
 DEBUG = True
 
@@ -67,7 +60,7 @@ def decrypt(iv: bytes, ciphertext: bytes, oracle: callable) -> bytes:
             print(f'[*] Block completed [{idx+1}/{len(blocks)}]')
 
     if not iv:
-        print("WARNING: Attack was successful, but the first block of plaintext was not recovered.")
+        print("WARNING: Attack was successful but the first block of plaintext was not recovered.")
 
     return result
 
@@ -90,7 +83,7 @@ def _get_intermediary_value(block: bytes, oracle: callable) -> bytes:
                         continue
                 break
         else:
-            raise Exception("No valid padding byte found. Is the oracle working correctly? The server might be dropping packets.")
+            raise Exception("No valid padding byte found")
 
         zeroing_iv[-pad_val] = candidate ^ pad_val
         if DEBUG:
@@ -98,24 +91,21 @@ def _get_intermediary_value(block: bytes, oracle: callable) -> bytes:
 
     return zeroing_iv
 
-# ==========================================
-# 3. EXECUTION
-# ==========================================
 if __name__ == "__main__":
     print("[*] Fetching ciphertext from server...")
     full_blob = fetch_ciphertext()
     
-    # Split the blob into the IV (first 16 bytes) and the actual ciphertext
+    # Split 
     iv = full_blob[:BLOCK_SIZE]
     ct = full_blob[BLOCK_SIZE:]
     
     print(f"[*] Starting decryption of {len(ct)} bytes...")
     
-    # Run the decrypt function, passing in our custom ctf_oracle
+    # Run the decrypt function
     plaintext = decrypt(iv, ct, ctf_oracle)
     
     if plaintext:
-        # Strip PKCS#7 padding from the final result
+        # Strip PKCS#7 padding 
         pad_len = plaintext[-1]
         if 1 <= pad_len <= BLOCK_SIZE:
             plaintext = plaintext[:-pad_len]
