@@ -1,0 +1,9 @@
+{
+  "nonce": "jUs1GQPaeJmtKv/D",
+  "ciphertext": "Gq0=",
+  "tag": "s3Yg1ewV/1xH/7b7OABwiQ==",
+  "signature": {
+    "S1": "211",
+    "S2": "421"
+  }
+}
