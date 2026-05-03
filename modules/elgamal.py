@@ -16,16 +16,10 @@ def read_parameters(config_file="data/config.json"):
         data = json.load(file)
         
     #extract p and alpha for mathematical operations
-    try:
+    
         p = int(data['p'])
         alpha = int(data['alpha'])
         
-    except KeyError as e:
-        raise KeyError(f"Missing parameter in configuration file : {e}")
-    except ValueError:
-        raise ValueError("Parameters must be integers.")
-    
-    print(f"[*] Parameters loaded successfully: p={p}, alpha={alpha}")
     return p,alpha
 
 #Step 2 : private key generation and saving
@@ -37,16 +31,16 @@ def generate_private_key(p):
     #random depends on pseudorandom generator which can be predicted 
     #secrets depends on the operating system's randomness that can be more secure and less predicatble
     
-    x = secrets.randbelow(p - 3) + 2
+    private_key_x = secrets.randbelow(p - 3) + 2
     
     #randbelow(p-1) generates a random number between 0 and p-2
     #randbelow(p-3) generates a random number between 0 and p-4
     #adding 2 to the results shifts the range by 2 resulting in a range of 2 to p-2 as required
     
-    return x
+    return private_key_x
 
 
-def save_private_key(username , x):
+def save_private_key_locally(username , x):
     
     #private key is to be saved locally in a file named after the username
     
@@ -54,12 +48,12 @@ def save_private_key(username , x):
     
     key_data = {
         "username" : username,
-        "private_key" : str(x) #casted to string to handle large integers
+        "private_key" : str(x) 
     }
     
     #write the private key data to the JSON file , indentation added for readability
     with open(filename, 'w') as file:
-        json.dump(key_data, file , indent=4)
+        json.dump(key_data, file)
         
     print(f" [*] Private key for '{username}' saved successfully")
     
@@ -69,10 +63,10 @@ def generate_public_key(p , alpha , x):
         
         #compute public key y = alpha^x mod p
         
-        y = pow(alpha , x , p)
-        return y
+        public_key_y = pow(alpha , x , p)
+        return public_key_y
     
-def save_public_key(username , p , alpha , y):
+def save_public_key_locally(username , p , alpha , y):
         
         #save public key locally and then it can be shared with others
         filename = f"keys/{username}_public_key.json"
@@ -86,7 +80,7 @@ def save_public_key(username , p , alpha , y):
         
         #write the public key data to the JSON file , indentation added for readability
         with open(filename, 'w') as file:
-            json.dump(key_data, file , indent=4)
+            json.dump(key_data, file)
             
         print(f" [*] Public key for '{username}' saved successfully")
         
@@ -105,6 +99,6 @@ if __name__ == "__main__":
         # Run your initialization steps here
         p, alpha = read_parameters()
         x = generate_private_key(p)
-        save_private_key(username, x)
+        save_private_key_locally(username, x)
         y = generate_public_key(p, alpha, x)
-        save_public_key(username, p, alpha, y)
+        save_public_key_locally(username, p, alpha, y)
