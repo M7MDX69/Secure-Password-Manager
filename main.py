@@ -33,7 +33,12 @@ def vault_path(username):
 def load_private_key(username):
     with open(private_key_path(username), "r", encoding="utf-8") as file:
         data = json.load(file)
-    return int(data["private_key"])
+    # Return the full dictionary instead of just the integer
+    return {
+        "p": int(data["p"]),
+        "alpha": int(data["alpha"]),
+        "private_key": int(data["private_key"])
+    }
 
 
 def load_public_key(username):
@@ -107,12 +112,12 @@ def setup_user():
     private_key = elgamal.generate_private_key(p)
     public_key = elgamal.generate_public_key(p, alpha, private_key)
 
-    elgamal.save_private_key(username, private_key)
+    elgamal.save_private_key(username, p, alpha, private_key)
     elgamal.save_public_key(username, p, alpha, public_key)
 
     master_password = ask_master_password(confirm=True)
-    vault.initialize_vault(vault_path(username), master_password)
-    sign_user_vault(username)
+    private_key_dict = load_private_key(username)
+    vault.initialize_vault(vault_path(username), master_password, private_key_dict)
 
     print(f"[*] Setup complete for '{username}'.")
 
@@ -129,16 +134,19 @@ def add_credential():
     website = input("Website: ").strip()
     account_username = input("Account username: ").strip()
     account_password = input("Account password: ")
+    private_key_dict = load_private_key(username)
+    public_key_dict = load_public_key(username)
 
     vault.add_credential(
         vault_path(username),
         master_password,
+        private_key_dict,
+        public_key_dict,
         website,
         account_username,
         account_password
     )
-    sign_user_vault(username)
-    print("[*] Vault re-signed.")
+    print("[*] Credential added and vault signed.")
 
 
 def retrieve_credential():
@@ -149,9 +157,11 @@ def retrieve_credential():
         print("[!] Vault signature is invalid. Operation aborted.")
         return
 
+    public_key_dict = load_public_key(username)
     master_password = ask_master_password()
     website = input("Website: ").strip()
-    matches = vault.retrieve_credential(vault_path(username), master_password, website)
+    matches = vault.retrieve_credential(vault_path(username), master_password, public_key_dict, website)
+    
 
     for item in matches:
         print(json.dumps(item, indent=2))
@@ -169,16 +179,19 @@ def update_credential():
     website = input("Website to update: ").strip()
     new_username = input("New account username: ").strip()
     new_password = input("New account password: ")
+    private_key_dict = load_private_key(username)
+    public_key_dict = load_public_key(username)
 
     vault.update_credential(
         vault_path(username),
         master_password,
+        private_key_dict,
+        public_key_dict,
         website,
         new_username,
         new_password
     )
-    sign_user_vault(username)
-    print("[*] Vault re-signed.")
+    print("[*] Credential updated and vault signed.")
 
 
 def delete_credential():
@@ -191,10 +204,17 @@ def delete_credential():
 
     master_password = ask_master_password()
     website = input("Website to delete: ").strip()
+    private_key_dict = load_private_key(username)
+    public_key_dict = load_public_key(username)
 
-    vault.delete_credential(vault_path(username), master_password, website)
-    sign_user_vault(username)
-    print("[*] Vault re-signed.")
+    vault.delete_credential(
+        vault_path(username), 
+        master_password, 
+        private_key_dict, 
+        public_key_dict, 
+        website
+    )
+    print("[*] Credential deleted and vault signed.")
 
 
 def list_websites():
@@ -205,8 +225,9 @@ def list_websites():
         print("[!] Vault signature is invalid. Operation aborted.")
         return
 
+    public_key_dict = load_public_key(username)
     master_password = ask_master_password()
-    websites = vault.list_websites(vault_path(username), master_password)
+    websites = vault.list_websites(vault_path(username), master_password, public_key_dict)
 
     if not websites:
         print("[*] Vault is empty.")
