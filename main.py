@@ -98,7 +98,7 @@ def sign_user_vault(username):
         vault_path(username),
         public_data["p"],
         public_data["alpha"],
-        private_key
+        private_key["private_key"]
     )
 
 
@@ -305,7 +305,8 @@ def prepare_receiver_dh_session():
         receiver_public["p"],
         receiver_public["alpha"],
         receiver_private["private_key"],
-        receiver
+        receiver_private["private_key"],
+        
     )
 
     receiver_dh_private_data = {
