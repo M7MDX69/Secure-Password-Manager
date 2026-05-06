@@ -4,7 +4,7 @@ Command-line password manager for the security course project.
 
 It implements:
 - AES-GCM vault encryption using a SHA-256 master-password key.
-- ElGamal digital signatures from scratch for integrity verification.
+- ElGamal digital signatures from scratchV for integrity verification.
 - Diffie-Hellman key exchange from scratch for secure vault export.
 - A CLI workflow for setup, credential management, signing, verification, export, and import.
 
