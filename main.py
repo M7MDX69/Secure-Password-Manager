@@ -75,7 +75,7 @@ def sign_user_vault(username):
         vault_path(username),
         public_data["p"],
         public_data["alpha"],
-        private_key
+        private_key["private_key"]
     )
 
 
@@ -264,7 +264,7 @@ def export_to_user():
         dh_alpha,
         sender_public["p"],
         sender_public["alpha"],
-        sender_private,
+        sender_private["private_key"],
         sender
     )
 
@@ -276,7 +276,7 @@ def export_to_user():
         dh_alpha,
         receiver_public["p"],
         receiver_public["alpha"],
-        receiver_private,
+        receiver_private["private_key"],
         receiver
     )
 
@@ -323,7 +323,7 @@ def export_to_user():
         sender_dh_public,
         sender_public["p"],
         sender_public["alpha"],
-        sender_private
+        sender_private["private_key"]
     )
 
     export_file = os.path.join(EXPORTS_DIR, f"{sender}_to_{receiver}_export_package.json")

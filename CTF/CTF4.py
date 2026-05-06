@@ -8,11 +8,11 @@ def extract_lsb_flag(image_path):
         print(f"[!] Error: Could not find '{image_path}'. Check your spelling and folder path!")
         return
 
-    # Convert to RGB to ensure we can read the pixel tuples properly
-    #img = img.convert('RGB')
+    
     pixels = img.load()
     width, height = img.size
 
+    print(f"[*] Image Mode: {img.mode}")
     print("[*] Extracting Least Significant Bits (Grayscale optimized)...")
     extracted_bits = ""
     

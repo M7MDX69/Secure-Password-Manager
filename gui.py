@@ -240,8 +240,8 @@ class PasswordManagerApp(ctk.CTk):
             s_priv, r_priv = load_private_key(sender), load_private_key(receiver)
             q, dh_alpha = dh_export.read_dh_parameters()["q"], dh_export.read_dh_parameters()["alpha"]
 
-            s_dh_res = dh_export.create_signed_dh_key_exchange_message(q, dh_alpha, s_pub["p"], s_pub["alpha"], s_priv, sender)
-            r_dh_res = dh_export.create_signed_dh_key_exchange_message(q, dh_alpha, r_pub["p"], r_pub["alpha"], r_priv, receiver)
+            s_dh_res = dh_export.create_signed_dh_key_exchange_message(q, dh_alpha, s_pub["p"], s_pub["alpha"], s_priv["private_key"], sender)
+            r_dh_res = dh_export.create_signed_dh_key_exchange_message(q, dh_alpha, r_pub["p"], r_pub["alpha"], r_priv["private_key"], receiver)
 
             if not dh_export.verify_signed_dh_public_key(s_dh_res["signed_message"], q, dh_alpha, s_pub["p"], s_pub["alpha"], s_pub["public_key"]):
                 raise ValueError("Sender DH key signature invalid.")
@@ -256,14 +256,14 @@ class PasswordManagerApp(ctk.CTk):
             r_dh_pub = dh_export.get_dh_public_from_signed_message(r_dh_res["signed_message"])
             s_shared_secret = dh_export.generate_shared_secret(r_dh_pub, s_dh_res["private_key"], q)
 
-            pkg = dh_export.export_vault(decrypted_s_vault, s_shared_secret, s_dh_pub, s_pub["p"], s_pub["alpha"], s_priv)
+            pkg = dh_export.export_vault(decrypted_s_vault, s_shared_secret, s_dh_pub, s_pub["p"], s_pub["alpha"], s_priv["private_key"])
             imported = dh_export.import_vault(pkg, receiver_private_dh=r_dh_res["private_key"], q=q, signature_p=s_pub["p"], signature_alpha=s_pub["alpha"], sender_public_key=s_pub["public_key"])
 
             r_data_key = vault.derive_key(dialog.result["Receiver Master Password"])
             r_new_vault = vault.encrypt_vault(imported, r_data_key)
             vault.save_vault(r_new_vault, vault_path(receiver))
             
-            signatures.sign_vault_file(vault_path(receiver), r_pub["p"], r_pub["alpha"], r_priv)
+            signatures.sign_vault_file(vault_path(receiver), r_pub["p"], r_pub["alpha"], r_priv["private_key"])
 
             messagebox.showinfo("Success", f"Vault successfully exported from {sender} to {receiver}!")
         except Exception as e:
