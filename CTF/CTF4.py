@@ -9,7 +9,7 @@ def extract_lsb_flag(image_path):
         return
 
     # Convert to RGB to ensure we can read the pixel tuples properly
-    img = img.convert('RGB')
+    #img = img.convert('RGB')
     pixels = img.load()
     width, height = img.size
 
@@ -23,7 +23,7 @@ def extract_lsb_flag(image_path):
             
             # Since the image is grayscale, R, G, and B are identical.
             # We only need to extract the LSB of the FIRST channel (Red).
-            r = pixel[0]
+            r = pixel
             extracted_bits += str(r & 1)
 
     print("[*] Grouping bits into bytes and translating to ASCII (Full Image Scan)...")
@@ -51,7 +51,7 @@ def extract_lsb_flag(image_path):
         end_index = extracted_text.find("}", start_index) + 1
         
         print("\n" + "="*50)
-        print("🚩 FLAG SUCCESSFULLY EXTRACTED:")
+        print("FLAG SUCCESSFULLY EXTRACTED:")
         print(extracted_text[start_index:end_index])
         print("="*50 + "\n")
     else:
