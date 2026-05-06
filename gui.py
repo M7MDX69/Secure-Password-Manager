@@ -690,80 +690,41 @@ class PasswordManagerApp(ctk.CTk):
         try:
             sender = dialog.result["Sender Username"]
             receiver = dialog.result["Receiver Username"]
+            if not user_exists(sender) or not user_exists(receiver): raise FileNotFoundError("Both users must be set up first.")
+            if not verify_user_vault(sender): raise ValueError("Sender vault signature is invalid!")
 
-            if not user_exists(sender) or not user_exists(receiver):
-                raise FileNotFoundError("Both users must be set up first.")
+            s_pub, r_pub = load_public_key(sender), load_public_key(receiver)
+            s_priv, r_priv = load_private_key(sender), load_private_key(receiver)
+            q, dh_alpha = dh_export.read_dh_parameters()["q"], dh_export.read_dh_parameters()["alpha"]
 
-            export_file = export_package_path(sender, receiver)
-            receiver_private_file = dh_private_path(receiver, sender)
+            s_dh_res = dh_export.create_signed_dh_key_exchange_message(q, dh_alpha, s_pub["p"], s_pub["alpha"], s_priv, sender)
+            r_dh_res = dh_export.create_signed_dh_key_exchange_message(q, dh_alpha, r_pub["p"], r_pub["alpha"], r_priv, receiver)
 
-            if not os.path.exists(export_file):
-                raise FileNotFoundError("Export package was not found.")
+            if not dh_export.verify_signed_dh_public_key(s_dh_res["signed_message"], q, dh_alpha, s_pub["p"], s_pub["alpha"], s_pub["public_key"]):
+                raise ValueError("Sender DH key signature invalid.")
+            if not dh_export.verify_signed_dh_public_key(r_dh_res["signed_message"], q, dh_alpha, r_pub["p"], r_pub["alpha"], r_pub["public_key"]):
+                raise ValueError("Receiver DH key signature invalid.")
 
-            if not os.path.exists(receiver_private_file):
-                raise FileNotFoundError(
-                    "Receiver session was not prepared first."
-                )
+            s_vault_data = vault.load_vault(vault_path(sender))
+            s_data_key = vault.derive_key(dialog.result["Sender Master Password"])
+            decrypted_s_vault = vault.decrypt_vault(s_vault_data, s_data_key)
 
-            export_package = load_json(export_file)
-            receiver_dh_private_data = load_json(receiver_private_file)
+            s_dh_pub = dh_export.get_dh_public_from_signed_message(s_dh_res["signed_message"])
+            r_dh_pub = dh_export.get_dh_public_from_signed_message(r_dh_res["signed_message"])
+            s_shared_secret = dh_export.generate_shared_secret(r_dh_pub, s_dh_res["private_key"], q)
 
-            q = receiver_dh_private_data["q"]
-            dh_alpha = receiver_dh_private_data["alpha"]
-            receiver_private_dh = receiver_dh_private_data["private_key"]
+            pkg = dh_export.export_vault(decrypted_s_vault, s_shared_secret, s_dh_pub, s_pub["p"], s_pub["alpha"], s_priv)
+            imported = dh_export.import_vault(pkg, receiver_private_dh=r_dh_res["private_key"], q=q, signature_p=s_pub["p"], signature_alpha=s_pub["alpha"], sender_public_key=s_pub["public_key"])
 
-            sender_public = load_public_key(sender)
+            r_data_key = vault.derive_key(dialog.result["Receiver Master Password"])
+            r_new_vault = vault.encrypt_vault(imported, r_data_key)
+            vault.save_vault(r_new_vault, vault_path(receiver))
+            
+            signatures.sign_vault_file(vault_path(receiver), r_pub["p"], r_pub["alpha"], r_priv)
 
-            sender_signed_dh = export_package.get("sender_signed_dh")
-
-            if sender_signed_dh is None:
-                raise ValueError("Sender signed key is missing.")
-
-            sender_dh_is_valid = dh_export.verify_signed_dh_public_key(
-                sender_signed_dh,
-                q,
-                dh_alpha,
-                sender_public["p"],
-                sender_public["alpha"],
-                sender_public["public_key"]
-            )
-
-            if not sender_dh_is_valid:
-                raise ValueError("Sender signed key is invalid.")
-
-            imported_vault = dh_export.import_vault(
-                export_package,
-                receiver_private_dh=receiver_private_dh,
-                q=q,
-                signature_p=sender_public["p"],
-                signature_alpha=sender_public["alpha"],
-                sender_public_key=sender_public["public_key"]
-            )
-
-            receiver_data_key = vault.derive_key(
-                dialog.result["Receiver Master Password"]
-            )
-
-            receiver_new_vault = vault.encrypt_vault(
-                imported_vault,
-                receiver_data_key
-            )
-
-            vault.save_vault(
-                receiver_new_vault,
-                vault_path(receiver)
-            )
-
-            sign_user_vault(receiver)
-
-            messagebox.showinfo(
-                "Success",
-                f"Vault imported successfully for '{receiver}'."
-            )
-
-        except Exception as error:
-            messagebox.showerror("Import Error", str(error))
-
+            messagebox.showinfo("Success", f"Vault successfully exported from {sender} to {receiver}!")
+        except Exception as e:
+            messagebox.showerror("Export Error", str(e))
 
 if __name__ == "__main__":
     app = PasswordManagerApp()

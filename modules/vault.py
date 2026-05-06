@@ -17,17 +17,15 @@ from Crypto.Hash import SHA256
 
 def derive_key(master_password: str) -> bytes:
     """
-    Derive a 32-byte AES-256 key from the master password using SHA-256.
-
-    AES-256 requires a key of exactly 32 bytes, and SHA-256 outputs exactly
-    32 bytes, so the SHA-256 digest of the password is used directly as
-    the AES key (the "data key").
-
     Args:
         master_password: The user's master password (any length).
 
     Returns:
         A 32-byte key suitable for AES-256.
+
+    Derive a 32-byte (256-bit) AES-256 key from the master password using SHA-256.
+    AES-256 requires a key of exactly 32 bytes(256-bit), and SHA-256 outputs exactly
+    converts the string into bytes. SHA-256 doesn't operate on strings (only bytes)
     """
     return SHA256.new(master_password.encode('utf-8')).digest()
 
@@ -40,6 +38,7 @@ def encrypt_vault(credentials: list, key: bytes) -> dict:
 
     A fresh random 12-byte nonce is generated for every encryption.
     NEVER reuse a nonce with the same key — doing so breaks GCM completely.
+    converts each binary value into a printable text string. JSON can't store raw bytes — only text — so base64 is how we get binary data into and out of a JSON file safely.
 
     Args:
         credentials: A list of credential dicts, e.g.
@@ -82,8 +81,6 @@ def decrypt_vault(vault_data: dict, key: bytes) -> list:
 
     Returns:
         The list of credential dicts.
-
-    Raises:
         ValueError: If the master password is wrong or the data is corrupted.
     """
     # Decode the base64 fields back to raw bytes.
