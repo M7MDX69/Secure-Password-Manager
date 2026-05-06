@@ -1,0 +1,13 @@
+{
+  "message": {
+    "type": "dh_public_key",
+    "sender": "kk",
+    "q": "467",
+    "alpha": "2",
+    "dh_public_key": "65"
+  },
+  "signature": {
+    "S1": "375",
+    "S2": "287"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "sender_dh_public": "414",
+  "encrypted_vault": {
+    "nonce": "0E6rp+gnjcDxdp+XuKigGg==",
+    "ciphertext": "gEkLfx220ESf9nPw67gHigbWpc84UtoPJaQo3tsE4nADasZ0nVA+yopIQ2Ig2/b5e6w1geUUlMpMLS+KwJeS",
+    "tag": "KXO242rrST8enxtyosoj/A=="
+  },
+  "signature": {
+    "S1": "311",
+    "S2": "220"
+  },
+  "sender_username": "kk",
+  "receiver_username": "aa",
+  "sender_signed_dh": {
+    "message": {
+      "type": "dh_public_key",
+      "sender": "kk",
+      "q": "467",
+      "alpha": "2",
+      "dh_public_key": "414"
+    },
+    "signature": {
+      "S1": "367",
+      "S2": "246"
+    }
+  },
+  "receiver_signed_dh": {
+    "message": {
+      "type": "dh_public_key",
+      "sender": "aa",
+      "q": "467",
+      "alpha": "2",
+      "dh_public_key": "28"
+    },
+    "signature": {
+      "S1": "14",
+      "S2": "57"
+    }
+  }
+}

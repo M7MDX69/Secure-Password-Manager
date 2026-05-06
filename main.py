@@ -98,9 +98,8 @@ def sign_user_vault(username):
         vault_path(username),
         public_data["p"],
         public_data["alpha"],
-        private_key
+        private_key["private_key"]
     )
-
 
 def verify_user_vault(username):
     public_data = load_public_key(username)
@@ -394,10 +393,16 @@ def export_vault_package():
 
     sender_vault_data = vault.load_vault(vault_path(sender))
     sender_data_key = vault.derive_key(sender_master_password)
-    decrypted_sender_vault = vault.decrypt_vault(
-        sender_vault_data,
-        sender_data_key
-    )
+
+    try:
+        decrypted_sender_vault = vault.decrypt_vault(
+            sender_vault_data,
+            sender_data_key
+        )
+    except ValueError as error:
+        print("[!] Sender master password is wrong or sender vault is corrupted.")
+        print(f"[!] Details: {error}")
+        return
 
     sender_dh_public = dh_export.get_dh_public_from_signed_message(
         sender_signed_dh
@@ -531,7 +536,6 @@ def main():
         if choice == "0":
             print("Goodbye.")
             break
-
 
         action = actions.get(choice)
 
