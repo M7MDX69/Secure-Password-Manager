@@ -1,0 +1,9 @@
+{
+  "nonce": "e4MEtCHMsycAxOoA",
+  "ciphertext": "DZw=",
+  "tag": "nfqGL00c27zAK9FlTcY51A==",
+  "signature": {
+    "S1": "445",
+    "S2": "405"
+  }
+}

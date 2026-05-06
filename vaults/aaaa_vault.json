@@ -1,0 +1,9 @@
+{
+  "nonce": "K/vdzDjVwxqatwCU",
+  "ciphertext": "A+w=",
+  "tag": "7whtUwtjfuQAQbAg5LQ4/Q==",
+  "signature": {
+    "S1": "275",
+    "S2": "441"
+  }
+}

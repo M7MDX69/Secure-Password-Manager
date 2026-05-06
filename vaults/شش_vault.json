@@ -1,0 +1,9 @@
+{
+  "nonce": "RQtXUNL8eW4/z1zK",
+  "ciphertext": "mxE=",
+  "tag": "cmkbPlrn9cYut9aT/EBsLg==",
+  "signature": {
+    "S1": "111",
+    "S2": "438"
+  }
+}
