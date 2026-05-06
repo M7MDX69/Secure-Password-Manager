@@ -105,7 +105,7 @@ def sign_user_vault(username):
         vault_path(username),
         public_data["p"],
         public_data["alpha"],
-        private_data
+        private_data["private_key"]
     )
 
 
