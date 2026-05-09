@@ -1,0 +1,9 @@
+{
+  "nonce": "KH3v9+PSiYjbmrUz",
+  "ciphertext": "Ekw=",
+  "tag": "BiB2SMSJl9cG9DloqLjbFg==",
+  "signature": {
+    "S1": "292",
+    "S2": "170"
+  }
+}

@@ -5,7 +5,7 @@ import secrets
 import sys
 from hashlib import sha256
 
-from Crypto.Cipher import AES  # type: ignore
+from Crypto.Cipher import AES  
 
 modules_folder = os.path.dirname(__file__)
 sys.path.append(modules_folder)
@@ -14,7 +14,6 @@ from signatures import sign_message, verify_signature
 
 
 def _message_to_sign(message_data):
-    # sort_keys=True makes the JSON order stable before signing.
     message_text = json.dumps(message_data, sort_keys=True)
     return message_text
 

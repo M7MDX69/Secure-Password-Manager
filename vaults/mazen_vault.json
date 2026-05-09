@@ -1,0 +1,9 @@
+{
+  "nonce": "3A81mo2jYY+YF5zd",
+  "ciphertext": "EZUuKk7wbdeHIDK6RYgRqitj0zOhfXx7V83Q28svi3XAY7DDnSmsvFq63wroS1zuOKgGtdn5DmqmM1sx636YgOLUsIdFO32SKQ==",
+  "tag": "SFgH/I/szS4SRcxTTChGRA==",
+  "signature": {
+    "S1": "328",
+    "S2": "177"
+  }
+}

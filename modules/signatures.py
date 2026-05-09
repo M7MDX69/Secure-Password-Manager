@@ -79,43 +79,32 @@ def verify_signature(message, signature, p, alpha, y):
     return left_side == right_side
 
 
-def sign_vault(username, encrypted_vault, p, alpha, x):
-    vault = f"vaults/{username}_vault.json"
-    signature = sign_message(encrypted_vault, p, alpha, x)
-
-    if os.path.exists(vault):
-        with open(vault, "r") as file:
-            vault_data = json.load(file)
-    else:
-        vault_data = {}
-
-    vault_data["encrypted_vault"] = encrypted_vault
+def sign_vault(vault_data, private_key):
+    """Generates an ElGamal signature for the vault contents."""
+    p = int(private_key["p"])
+    alpha = int(private_key["alpha"])
+    x = int(private_key["private_key"])
+    
+    contents = _vault_contents_to_sign(vault_data)
+    signature = sign_message(contents, p, alpha, x)
     vault_data["signature"] = signature
+    return vault_data
 
-    with open(vault, "w") as file:
-        json.dump(vault_data, file, indent=4)
-
-    print(f"[*] Success: Vault for '{username}' has been signed.")
-    return signature
-
-
-def verify_vault(username, encrypted_vault, p, alpha, y):
-    vault = f"vaults/{username}_vault.json"
-
+def verify_vault(vault_data, public_key):
+    """Verifies the ElGamal signature of the vault contents."""
     try:
-        with open(vault, "r") as file:
-            vault_data = json.load(file)
-        signature = vault_data["signature"]
-    except (FileNotFoundError, KeyError, json.JSONDecodeError):
-        print("[!] ERROR: No valid signature found. Vault is unverified.")
+        p = int(public_key["p"])
+        alpha = int(public_key["alpha"])
+        y = int(public_key["public_key"])
+        
+        signature = vault_data.get("signature")
+        if not signature:
+            return False
+            
+        contents = _vault_contents_to_sign(vault_data)
+        return verify_signature(contents, signature, p, alpha, y)
+    except (KeyError, TypeError, ValueError):
         return False
-
-    if verify_signature(encrypted_vault, signature, p, alpha, y):
-        print(f"[*] SUCCESS: Vault integrity verified for '{username}'.")
-        return True
-
-    print("[!] SECURITY WARNING: The vault digital signature is invalid.")
-    return False
 
 
 def sign_vault_file(vault_path, p, alpha, x):

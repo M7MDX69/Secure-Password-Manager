@@ -1,41 +1,19 @@
 """
 Module 2: Vault Encryption & Credential Management
-====================================================
-Part of the Secure Password Manager project (CMPS426).
-
-This module manages the encrypted vault file. The vault stores credentials
-(website, username, password) and is protected by a master password.
-
-Cryptographic design:
-  - The master password is hashed with SHA-256 to produce a 32-byte AES-256 key
-    (called the "data key").
-  - The entire list of credentials is encrypted with AES in GCM mode, which
-    provides both confidentiality and authentication.
-  - The vault is stored as a JSON file with base64-encoded fields.
-
-Vault file structure:
-  {
-    "nonce":      "<base64-encoded 12-byte nonce>",
-    "ciphertext": "<base64-encoded encrypted credentials>",
-    "tag":        "<base64-encoded 16-byte GCM authentication tag>",
-    "signature":  "<ElGamal signature added by Module 3>"   # optional, added later
-  }
-
-Note: The "signature" field is produced by Module 3 (digital signatures).
-Module 2 does not generate or verify it; it only preserves the field
-when reading and writing the vault.
 """
 
 import os
 import json
 import base64
+try:
+    from modules.signatures import sign_vault, verify_vault
+except ImportError:
+    from signatures import sign_vault, verify_vault
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
 
 
-# ---------------------------------------------------------------------------
 # Key derivation
-# ---------------------------------------------------------------------------
 
 def derive_key(master_password: str) -> bytes:
     """
@@ -54,9 +32,7 @@ def derive_key(master_password: str) -> bytes:
     return SHA256.new(master_password.encode('utf-8')).digest()
 
 
-# ---------------------------------------------------------------------------
 # Encryption / decryption of the credentials list
-# ---------------------------------------------------------------------------
 
 def encrypt_vault(credentials: list, key: bytes) -> dict:
     """
@@ -125,9 +101,7 @@ def decrypt_vault(vault_data: dict, key: bytes) -> list:
     return json.loads(plaintext_bytes.decode('utf-8'))
 
 
-# ---------------------------------------------------------------------------
 # Vault file I/O
-# ---------------------------------------------------------------------------
 
 def load_vault(vault_path: str) -> dict:
     """Read the JSON vault file from disk."""
@@ -146,7 +120,6 @@ def vault_exists(vault_path: str) -> bool:
     return os.path.exists(vault_path)
 
 
-# ---------------------------------------------------------------------------
 # High-level operations: add / retrieve / update / delete
 #
 # Each operation follows the same pattern:
@@ -159,15 +132,15 @@ def vault_exists(vault_path: str) -> bool:
 # After each modification, Module 3 should be called to re-sign the vault.
 # Before each read, Module 3 should be called to verify the signature.
 # Those calls are done by the main CLI, not inside Module 2.
-# ---------------------------------------------------------------------------
 
-def initialize_vault(vault_path: str, master_password: str) -> None:
+def initialize_vault(vault_path: str, master_password: str, private_key: dict) -> None:
     """
     Create a brand-new empty vault. Should be called once during setup.
 
     Args:
         vault_path: Where the vault file will be saved.
         master_password: The master password chosen by the user.
+        private_key: ElGamal private key dict used to sign the vault.
     """
     if vault_exists(vault_path):
         raise FileExistsError(
@@ -177,11 +150,11 @@ def initialize_vault(vault_path: str, master_password: str) -> None:
 
     key = derive_key(master_password)
     vault_data = encrypt_vault([], key)   # empty list of credentials
-    save_vault(vault_data, vault_path)
+    save_vault(sign_vault(vault_data, private_key), vault_path)
     print(f"New vault created at '{vault_path}'.")
 
 
-def add_credential(vault_path: str, master_password: str,
+def add_credential(vault_path: str, master_password: str, private_key: dict, public_key: dict,
                    website: str, username: str, password: str) -> None:
     """
     Add a new credential to the vault. Creates the vault if it doesn't exist.
@@ -191,6 +164,8 @@ def add_credential(vault_path: str, master_password: str,
     # Load existing credentials, or start with an empty list for a brand-new vault.
     if vault_exists(vault_path):
         vault_data  = load_vault(vault_path)
+        if not verify_vault(vault_data, public_key):
+            raise ValueError("Vault signature invalid — refusing to modify a tampered vault.")
         credentials = decrypt_vault(vault_data, key)
     else:
         credentials = []
@@ -202,11 +177,11 @@ def add_credential(vault_path: str, master_password: str,
     })
 
     new_vault_data = encrypt_vault(credentials, key)
-    save_vault(new_vault_data, vault_path)
+    save_vault(sign_vault(new_vault_data, private_key), vault_path)
     print(f"Credential for '{website}' added successfully.")
 
 
-def retrieve_credential(vault_path: str, master_password: str,
+def retrieve_credential(vault_path: str, master_password: str, public_key: dict,
                         website: str) -> list:
     """
     Retrieve all credentials matching the given website.
@@ -216,6 +191,8 @@ def retrieve_credential(vault_path: str, master_password: str,
     """
     key = derive_key(master_password)
     vault_data  = load_vault(vault_path)
+    if not verify_vault(vault_data, public_key):
+        raise ValueError("Vault signature invalid — refusing to read a tampered vault.")
     credentials = decrypt_vault(vault_data, key)
 
     matches = [c for c in credentials if c["website"] == website]
@@ -224,18 +201,20 @@ def retrieve_credential(vault_path: str, master_password: str,
     return matches
 
 
-def list_websites(vault_path: str, master_password: str) -> list:
+def list_websites(vault_path: str, master_password: str, public_key: dict) -> list:
     """
     Return the list of all websites stored in the vault (without passwords).
     Useful for showing the user what's in their vault.
     """
     key = derive_key(master_password)
     vault_data  = load_vault(vault_path)
+    if not verify_vault(vault_data, public_key):
+        raise ValueError("Vault signature invalid — refusing to read a tampered vault.")
     credentials = decrypt_vault(vault_data, key)
     return [c["website"] for c in credentials]
 
 
-def update_credential(vault_path: str, master_password: str,
+def update_credential(vault_path: str, master_password: str, private_key: dict, public_key: dict,
                       website: str,
                       new_username: str, new_password: str) -> None:
     """
@@ -244,6 +223,8 @@ def update_credential(vault_path: str, master_password: str,
     """
     key = derive_key(master_password)
     vault_data  = load_vault(vault_path)
+    if not verify_vault(vault_data, public_key):
+        raise ValueError("Vault signature invalid — refusing to modify a tampered vault.")
     credentials = decrypt_vault(vault_data, key)
 
     updated_count = 0
@@ -258,17 +239,19 @@ def update_credential(vault_path: str, master_password: str,
         return
 
     new_vault_data = encrypt_vault(credentials, key)
-    save_vault(new_vault_data, vault_path)
+    save_vault(sign_vault(new_vault_data, private_key), vault_path)
     print(f"Updated {updated_count} credential(s) for '{website}'.")
 
 
-def delete_credential(vault_path: str, master_password: str,
+def delete_credential(vault_path: str, master_password: str, private_key: dict, public_key: dict,
                       website: str) -> None:
     """
     Delete all credentials matching the given website.
     """
     key = derive_key(master_password)
     vault_data  = load_vault(vault_path)
+    if not verify_vault(vault_data, public_key):
+        raise ValueError("Vault signature invalid — refusing to modify a tampered vault.")
     credentials = decrypt_vault(vault_data, key)
 
     new_credentials = [c for c in credentials if c["website"] != website]
@@ -279,50 +262,48 @@ def delete_credential(vault_path: str, master_password: str,
         return
 
     new_vault_data = encrypt_vault(new_credentials, key)
-    save_vault(new_vault_data, vault_path)
+    save_vault(sign_vault(new_vault_data, private_key), vault_path)
     print(f"Deleted {deleted_count} credential(s) for '{website}'.")
 
 
-# ---------------------------------------------------------------------------
 # Standalone test — runs only when this file is executed directly.
-# This lets you verify Module 2 works on its own, before integrating with
-# the rest of the project.
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    VAULT = "vault.json"
-    PWD   = "my_master_password"
+    VAULT  = "vault.json"
+    PWD    = "my_master_password"
+    PR_KEY = json.load(open("keys/test_user_private_key.json"))
+    PU_KEY = json.load(open("keys/test_user_public_key.json"))
 
     # Clean up any leftover vault from a previous test run.
     if vault_exists(VAULT):
         os.remove(VAULT)
 
     print("=== Test 1: Create a new vault and add credentials ===")
-    initialize_vault(VAULT, PWD)
-    add_credential(VAULT, PWD, "github.com", "mazen",            "ghp_secret_token")
-    add_credential(VAULT, PWD, "gmail.com",  "mazen@gmail.com",  "MyGmailPwd!")
-    add_credential(VAULT, PWD, "facebook.com", "mazen.fb",       "FbPassword123")
+    initialize_vault(VAULT, PWD, PR_KEY)
+    add_credential(VAULT, PWD, PR_KEY, PU_KEY, "github.com",   "mazen",           "ghp_secret_token")
+    add_credential(VAULT, PWD, PR_KEY, PU_KEY, "gmail.com",    "mazen@gmail.com", "MyGmailPwd!")
+    add_credential(VAULT, PWD, PR_KEY, PU_KEY, "facebook.com", "mazen.fb",        "FbPassword123")
 
     print("\n=== Test 2: List all websites ===")
-    print(list_websites(VAULT, PWD))
+    print(list_websites(VAULT, PWD, PU_KEY))
 
     print("\n=== Test 3: Retrieve a credential ===")
-    print(retrieve_credential(VAULT, PWD, "github.com"))
+    print(retrieve_credential(VAULT, PWD, PU_KEY, "github.com"))
 
     print("\n=== Test 4: Update a credential ===")
-    update_credential(VAULT, PWD, "github.com", "mazen_new", "new_token_xyz")
-    print(retrieve_credential(VAULT, PWD, "github.com"))
+    update_credential(VAULT, PWD, PR_KEY, PU_KEY, "github.com", "mazen_new", "new_token_xyz")
+    print(retrieve_credential(VAULT, PWD, PU_KEY, "github.com"))
 
     print("\n=== Test 5: Wrong password should be rejected ===")
     try:
-        retrieve_credential(VAULT, PWD + "_wrong", "github.com")
+        retrieve_credential(VAULT, PWD + "_wrong", PU_KEY, "github.com")
         print("FAIL: wrong password was accepted!")
     except ValueError as e:
         print(f"PASS: wrong password correctly rejected ({e})")
 
     print("\n=== Test 6: Delete a credential ===")
-    delete_credential(VAULT, PWD, "gmail.com")
-    print(list_websites(VAULT, PWD))
+    delete_credential(VAULT, PWD, PR_KEY, PU_KEY, "gmail.com")
+    print(list_websites(VAULT, PWD, PU_KEY))
 
     print("\n=== Test 7: Tampering with the vault should be detected ===")
     # Flip a single bit in the ciphertext to simulate tampering.
@@ -333,9 +314,32 @@ if __name__ == "__main__":
     save_vault(vault_data, VAULT)
 
     try:
-        retrieve_credential(VAULT, PWD, "github.com")
+        retrieve_credential(VAULT, PWD, PU_KEY, "github.com")
         print("FAIL: tampered vault was accepted!")
     except ValueError as e:
         print(f"PASS: tampered vault correctly rejected ({e})")
+
+    print("\n=== Test 8: Signature catches tampering before AES-GCM ===")
+    # Restore a clean signed vault, flip a ciphertext byte WITHOUT re-signing,
+    # then confirm the error comes from Module 3 (not AES-GCM).
+    if vault_exists(VAULT):
+        os.remove(VAULT)
+    initialize_vault(VAULT, PWD, PR_KEY)
+    add_credential(VAULT, PWD, PR_KEY, PU_KEY, "github.com", "mazen", "ghp_secret_token")
+
+    vault_data = load_vault(VAULT)
+    ct_bytes   = bytearray(base64.b64decode(vault_data["ciphertext"]))
+    ct_bytes[0] ^= 0x01
+    vault_data["ciphertext"] = base64.b64encode(bytes(ct_bytes)).decode('utf-8')
+    save_vault(vault_data, VAULT)          # saved WITHOUT re-signing — signature now invalid
+
+    try:
+        retrieve_credential(VAULT, PWD, PU_KEY, "github.com")
+        print("FAIL: tampered vault was accepted!")
+    except ValueError as e:
+        if "Vault signature invalid" in str(e):
+            print(f"PASS: Module 3 caught tampering before AES-GCM ({e})")
+        else:
+            print(f"FAIL: wrong exception raised ({e})")
 
     print("\nAll tests complete.")

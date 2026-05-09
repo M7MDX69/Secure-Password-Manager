@@ -1,0 +1,9 @@
+{
+  "nonce": "ASAnekHlBJcIQnpO",
+  "ciphertext": "qLY=",
+  "tag": "cAaDtQS2eODxvtfeFGB6uA==",
+  "signature": {
+    "S1": "106",
+    "S2": "117"
+  }
+}
